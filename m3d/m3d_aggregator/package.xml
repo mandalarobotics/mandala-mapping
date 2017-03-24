@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+<package>
+  <name>m3d_aggregator</name>
+  <version>0.0.1</version>
+  <description>The m3d package, aggregation of laser scans or pointclouds</description>
+
+  <maintainer email="michalpelka@gmail.com">Michał Pełka</maintainer>
+
+
+
+  <license>BSD</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <build_depend>roscpp</build_depend>
+  <build_depend>pcl_ros</build_depend>
+  <build_depend>m3d_msgs</build_depend>
+  <build_depend>tf</build_depend>
+  <build_depend>tf_conversion</build_depend>
+
+
+
+  <run_depend>roscpp</run_depend>
+  <run_depend>pcl_ros</run_depend>
+  <run_depend>m3d_msgs</run_depend>
+  <run_depend>tf</run_depend>
+  <run_depend>tf_conversion</run_depend>
+
+  <!-- The export tag contains other, unspecified, tags -->
+  <export>
+    <!-- You can specify that this package is a metapackage here: -->
+    <!-- <metapackage/> -->
+
+    <!-- Other tools can request additional information be placed here -->
+
+  </export>
+</package>
