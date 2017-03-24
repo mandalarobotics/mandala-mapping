@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+
+<launch>
+  <include file="$(find m3dunit_base)/launch/universal.launch" />
+  <include file="$(find husky_base)/launch/base.launch" />
+  <node name="static_tf" type="static_transform_publisher" pkg="tf" args = "0 0 0 0 0 0 user_rail_link m3d_test/m3d_link 10"/>
+
+</launch>
