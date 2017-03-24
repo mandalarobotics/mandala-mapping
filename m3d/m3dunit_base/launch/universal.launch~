@@ -2,7 +2,7 @@
 <launch>
 
 <arg name="unit_name" default="m3d_test"/>
-<arg name="front_laser_ip" default="192.168.0.147"/>
+<arg name="front_laser_ip" default="192.168.0.205"/>
 <arg name="rot_laser_ip"   default="192.168.0.206"/>
 
 <arg name="front_laser_type" default="TIM500"/>
