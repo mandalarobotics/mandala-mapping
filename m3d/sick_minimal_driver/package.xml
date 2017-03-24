@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<package>
+  <name>sick_minimal_driver</name>
+  <version>0.0.0</version>
+  <description>The minimal driver with allows to poll scans from sick laser rangefinders</description>
+
+  <maintainer email="michalpelka@gmail.com">Michal Pelka</maintainer>
+
+  <license>BSD</license>
+
+
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <build_depend>message_generation</build_depend>
+  <build_depend>roscpp</build_depend>
+
+
+  <run_depend>message_generation</run_depend>
+  <run_depend>message_runtime</run_depend>
+  <run_depend>roscpp</run_depend>
+
+  
+  <export>
+
+
+  </export>
+</package>
