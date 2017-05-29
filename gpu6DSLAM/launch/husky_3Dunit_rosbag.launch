@@ -1,0 +1,21 @@
+<launch>
+  <param name="/use_sim_time" type="boolean" value="true"/>
+<arg name="bagfile" default=" /home/janusz/datasets/piap/_2017-05-27-20-21-58.bag"/>
+
+
+
+    <node name="aa_rosbag_play" pkg="rosbag" type="play" args="--clock -r 1.0 $(arg bagfile)">
+    </node>
+
+
+  <node name="gpu_6dslam_node" pkg="gpu_6dslam" type="gpu_6dslam_node">
+   
+
+  
+   
+
+
+  </node>
+<!--  </group>-->
+
+</launch>
