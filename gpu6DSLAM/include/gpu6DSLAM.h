@@ -58,8 +58,8 @@ public:
 	float semantic_classification_bounding_box_extension;
 
 	float slam_registerLastArrivedScan_distance_threshold;
-
-	int slam_number_of_observations_threshold;
+	float slam_registerAll_distance_threshold;
+	size_t slam_number_of_observations_threshold;
 
 	float slam_search_radius_step1;
 	float slam_bucket_size_step1;
@@ -73,6 +73,9 @@ public:
 	float slam_bucket_size_step3;
 	int slam_registerLastArrivedScan_number_of_iterations_step3;
 
+	int slam_registerAll_number_of_iterations_step1;
+	int slam_registerAll_number_of_iterations_step2;
+	int slam_registerAll_number_of_iterations_step3;
 
 	float slam_bounding_box_extension;
 	float slam_max_number_considered_in_INNER_bucket;
@@ -82,6 +85,15 @@ public:
 	float slam_observation_weight_edge;
 	float slam_observation_weight_ceiling;
 	float slam_observation_weight_ground;
+
+	float findBestYaw_start_angle;
+	float findBestYaw_finish_angle;
+	float findBestYaw_step_angle;
+	float findBestYaw_bucket_size;
+	float findBestYaw_bounding_box_extension;
+	float findBestYaw_search_radius;
+	float findBestYaw_max_number_considered_in_INNER_bucket;
+	float findBestYaw_max_number_considered_in_OUTER_bucket;
 
 	int cudaDevice;
 
@@ -135,7 +147,7 @@ public:
 		this->noise_removal_number_of_points_in_bucket_threshold = 3;
 		this->noise_removal_bounding_box_extension = 1.0f;
 
-		this->downsampling_resolution = 0.3f;
+		this->downsampling_resolution = 0.1f;
 
 
 		this->semantic_classification_normal_vectors_search_radius = 1.0f;
@@ -146,45 +158,60 @@ public:
 		this->semantic_classification_max_number_considered_in_OUTER_bucket = 100;
 		this->semantic_classification_bounding_box_extension = 1.0f;
 
-		this->slam_registerLastArrivedScan_distance_threshold = 30.0f;
+		this->slam_registerLastArrivedScan_distance_threshold = 100.0f;
+		this->slam_registerAll_distance_threshold = 10.0f;
 
 		this->slam_number_of_observations_threshold = 100;
 
-		this->slam_search_radius_step1 = 2.0f;
-		this->slam_bucket_size_step1 = 2.0f;
-		this->slam_registerLastArrivedScan_number_of_iterations_step1 = 50.0f;
+		this->slam_search_radius_step1 = 0.5f;
+		this->slam_bucket_size_step1 = 0.5f;
+		this->slam_registerLastArrivedScan_number_of_iterations_step1 = 10.0f;
 
-		this->slam_search_radius_step2 = 1.0f;
-		this->slam_bucket_size_step2 = 1.0f;
-		this->slam_registerLastArrivedScan_number_of_iterations_step2 = 50.0f;
+		this->slam_search_radius_step2 = 0.4f;
+		this->slam_bucket_size_step2 = 0.5f;
+		this->slam_registerLastArrivedScan_number_of_iterations_step2 = 10.0f;
 
-		this->slam_search_radius_step3 = 0.5f;
-		this->slam_bucket_size_step3 = 1.0f;
-		this->slam_registerLastArrivedScan_number_of_iterations_step3 = 50.0f;
+		this->slam_search_radius_step3 = 0.3f;
+		this->slam_bucket_size_step3 = 0.5f;
+		this->slam_registerLastArrivedScan_number_of_iterations_step3 = 10.0f;
 
+		this->slam_registerAll_number_of_iterations_step1 = 0;
+		this->slam_registerAll_number_of_iterations_step2 = 0;
+		this->slam_registerAll_number_of_iterations_step3 = 10;
 
 
 		this->slam_bounding_box_extension = 1.0f;
-		this->slam_max_number_considered_in_INNER_bucket = 50.0f;
-		this->slam_max_number_considered_in_OUTER_bucket = 50.0f;
+		this->slam_max_number_considered_in_INNER_bucket = 100.0f;
+		this->slam_max_number_considered_in_OUTER_bucket = 100.0f;
 
 		this->slam_observation_weight_plane = 1.0f;
 		this->slam_observation_weight_edge = 1.0f;
 		this->slam_observation_weight_ceiling = 1.0f;
 		this->slam_observation_weight_ground = 1.0f;
 
-
+		this->findBestYaw_start_angle = -30.0f;
+		this->findBestYaw_finish_angle = 30.0f;
+		this->findBestYaw_step_angle = 0.5f;
+		this->findBestYaw_bucket_size = 1.0f;
+		this->findBestYaw_bounding_box_extension = 1.0f;
+		this->findBestYaw_search_radius = 0.3f;
+		this->findBestYaw_max_number_considered_in_INNER_bucket = 50;
+		this->findBestYaw_max_number_considered_in_OUTER_bucket = 50;
 
 		this->cudaDevice = 0;
 
 	};
 	~gpu6DSLAM(){};
 
-	void registerSingleScan(pcl::PointCloud<lidar_pointcloud::PointXYZIRNLRGB> &pc, Eigen::Affine3f mtf, std::string iso_time_str);
-	pcl::PointCloud<lidar_pointcloud::PointXYZIRNLRGB> getMetascan();
+	void registerSingleScan(pcl::PointCloud<lidar_pointcloud::PointXYZIRNLRGB> pc, Eigen::Affine3f mtf, std::string iso_time_str);
+	pcl::PointCloud<lidar_pointcloud::PointXYZIRNLRGB> getMetascan(Eigen::Affine3f m);
 
 	void registerLastArrivedScan(CCudaWrapper &cudaWrapper, float slam_search_radius, float slam_bucket_size);
+
+	void registerAll(CCudaWrapper &cudaWrapper, float slam_search_radius, float slam_bucket_size);
+
 	void transformPointCloud(pcl::PointCloud<lidar_pointcloud::PointXYZIRNLRGB> &pointcloud, Eigen::Affine3f transform);
+
 
 };
 

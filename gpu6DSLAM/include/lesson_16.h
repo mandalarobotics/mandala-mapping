@@ -69,6 +69,9 @@ cudaError_t cudaCompute_AtP(int threads, double *d_A, double *d_P, double *d_AtP
 cudaError_t fill_A_l_cuda(int threads, double *d_A, double x, double y, double z, double om, double fi, double ka,
 		obs_nn_t *d_obs_nn, int nop, double *d_P, double *d_l);
 
+cudaError_t fill_A_l_4DOFcuda(int threads, double *d_A, double x, double y, double z, double om, double fi, double ka,
+		obs_nn_t *d_obs_nn, int nop, double *d_P, double *d_l);
+
 cudaError_t cudaSemanticNearestNeighborSearch(
 		int threads,
 		lidar_pointcloud::PointXYZIRNLRGB *d_first_point_cloud,
@@ -107,5 +110,33 @@ cudaError_t cudaSemanticLabelingFloorCeiling(
 		lidar_pointcloud::PointXYZIRNLRGB * d_point_cloud,
 		int number_of_points,
 		float ground_Z_coordinate_threshold);
+
+cudaError_t cudaCountNumberOfSemanticNearestNeighbours(
+	int threads,
+	lidar_pointcloud::PointXYZIRNLRGB *d_first_point_cloud,
+	int number_of_points_first_point_cloud,
+	lidar_pointcloud::PointXYZIRNLRGB *d_second_point_cloud,
+	int number_of_points_second_point_cloud,
+	hashElement *d_hashTable,
+	bucket *d_buckets,
+	gridParameters rgd_params,
+	float search_radius,
+	int max_number_considered_in_INNER_bucket,
+	int max_number_considered_in_OUTER_bucket,
+	int *d_nearest_neighbour_indexes,
+	int &number_of_nn);
+
+cudaError_t cudaTransformPointCloud(int threads,
+		lidar_pointcloud::PointXYZIRNLRGB *d_point_cloud,
+		int number_of_points,
+		float r00, float r10, float r20, float r01, float r11, float r21, float r02, float r12, float r22, float t0, float t1, float t2);
+
+
+cudaError_t cudaTransformPointCloud(int threads,
+		lidar_pointcloud::PointXYZIRNLRGB *d_point_cloud_in,
+		int number_of_points_in,
+		lidar_pointcloud::PointXYZIRNLRGB *d_point_cloud_out,
+		int number_of_points_out,
+		float r00, float r10, float r20, float r01, float r11, float r21, float r02, float r12, float r22, float t0, float t1, float t2);
 
 #endif

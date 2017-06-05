@@ -438,6 +438,96 @@ cudaError_t fill_A_l_cuda(int threads, double *d_A, double x, double y, double z
 	return err;
 }
 
+__global__ void  kernel_fill_A_l_4DOFcuda(double *d_A, double x, double y, double z, double om, double fi, double ka,
+		obs_nn_t *d_obs_nn, int nop, double *d_P, double *d_l)
+{
+	int ind=blockIdx.x*blockDim.x+threadIdx.x;
+
+	if(ind<nop)
+	{
+		obs_nn_t obs_nn = d_obs_nn[ind];
+		double r[9];
+		computeR(om, fi, ka, r);
+		double x0 = obs_nn.x0;
+		double y0 = obs_nn.y0;
+		double z0 = obs_nn.z0;
+
+		double a11 = -1.0;
+		double a12 =  0.0;
+		double a13 =  0.0;
+
+		double a21 =  0.0;
+		double a22 = -1.0;
+		double a23 =  0.0;
+
+		double a31 =  0.0;
+		double a32 =  0.0;
+		double a33 = -1.0;
+
+		double m = 1.0;
+
+		double a14 = compute_a11();
+		double a15 = compute_a12(m, om, fi, ka, x0, y0, z0);
+		double a16 = compute_a13(m, r, x0, y0);
+
+		double a24 = compute_a21(m, r, x0, y0, z0);
+		double a25 = compute_a22(m, om, fi, ka, x0, y0, z0);
+		double a26 = compute_a23(m, r, x0, y0);
+
+		double a34 = compute_a31(m, r, x0, y0, z0);
+		double a35 = compute_a32(m, om, fi, ka, x0, y0, z0);
+		double a36 = compute_a33(m, r, x0, y0);
+
+		d_A[ind * 3 + 0 + 0 * nop * 3] = a11;
+		d_A[ind * 3 + 1 + 0 * nop * 3] = a21;
+		d_A[ind * 3 + 2 + 0 * nop * 3] = a31;
+
+		d_A[ind * 3 + 0 + 1 * nop * 3] = a12;
+		d_A[ind * 3 + 1 + 1 * nop * 3] = a22;
+		d_A[ind * 3 + 2 + 1 * nop * 3] = a32;
+
+		d_A[ind * 3 + 0 + 2 * nop * 3] = a13;
+		d_A[ind * 3 + 1 + 2 * nop * 3] = a23;
+		d_A[ind * 3 + 2 + 2 * nop * 3] = a33;
+
+		d_A[ind * 3 + 0 + 3 * nop * 3] = -a16;
+		d_A[ind * 3 + 1 + 3 * nop * 3] = -a26;
+		d_A[ind * 3 + 2 + 3 * nop * 3] = -a36;
+
+		/*d_A[ind * 3 + 0 + 3 * nop * 3] = -a14;
+		d_A[ind * 3 + 1 + 3 * nop * 3] = -a24;
+		d_A[ind * 3 + 2 + 3 * nop * 3] = -a34;
+
+		d_A[ind * 3 + 0 + 4 * nop * 3] = -a15;
+		d_A[ind * 3 + 1 + 4 * nop * 3] = -a25;
+		d_A[ind * 3 + 2 + 4 * nop * 3] = -a35;
+
+		d_A[ind * 3 + 0 + 5 * nop * 3] = -a16;
+		d_A[ind * 3 + 1 + 5 * nop * 3] = -a26;
+		d_A[ind * 3 + 2 + 5 * nop * 3] = -a36;*/
+
+		d_P[ind * 3    ] = obs_nn.P;
+		d_P[ind * 3 + 1] = obs_nn.P;
+		d_P[ind * 3 + 2] = obs_nn.P;
+
+		d_l[ind * 3    ] = obs_nn.x_diff;
+		d_l[ind * 3 + 1] = obs_nn.y_diff;
+		d_l[ind * 3 + 2] = obs_nn.z_diff;
+
+	}
+}
+
+cudaError_t fill_A_l_4DOFcuda(int threads, double *d_A, double x, double y, double z, double om, double fi, double ka,
+		obs_nn_t *d_obs_nn, int nop, double *d_P, double *d_l)
+{
+	cudaError_t err = ::cudaSuccess;
+	int blocks=nop/threads+1;
+	kernel_fill_A_l_4DOFcuda<<<blocks,threads>>>(d_A, x, y, z, om, fi, ka, d_obs_nn, nop, d_P, d_l);
+
+	err = cudaDeviceSynchronize();
+	return err;
+}
+
 __global__ void kernel_semanticNearestNeighborSearch(
 		lidar_pointcloud::PointXYZIRNLRGB *d_first_point_cloud,
 		int number_of_points_first_point_cloud,
@@ -1088,4 +1178,149 @@ cudaError_t cudaSemanticLabelingFloorCeiling(
 
 	err = cudaDeviceSynchronize();
 	return err;
+}
+
+__global__ void  kernel_change_nn_value_for_reduction(int *d_nearest_neighbour_indexes, unsigned int nop)
+{
+	int ind = blockIdx.x*blockDim.x + threadIdx.x;
+
+	if (ind<nop)
+	{
+		if (d_nearest_neighbour_indexes[ind] < 0)
+		{
+			d_nearest_neighbour_indexes[ind] = 0;
+		}
+		else
+		{
+			d_nearest_neighbour_indexes[ind] = 1;
+		}
+	}
+}
+
+cudaError_t cudaCountNumberOfSemanticNearestNeighbours(
+	int threads,
+	lidar_pointcloud::PointXYZIRNLRGB *d_first_point_cloud,
+	int number_of_points_first_point_cloud,
+	lidar_pointcloud::PointXYZIRNLRGB *d_second_point_cloud,
+	int number_of_points_second_point_cloud,
+	hashElement *d_hashTable,
+	bucket *d_buckets,
+	gridParameters rgd_params,
+	float search_radius,
+	int max_number_considered_in_INNER_bucket,
+	int max_number_considered_in_OUTER_bucket,
+	int *d_nearest_neighbour_indexes,
+	int &number_of_nn)
+{
+	cudaError_t err = cudaGetLastError();
+
+	int blocks = number_of_points_second_point_cloud / threads + 1;
+
+	kernel_semanticNearestNeighborSearch << <blocks, threads >> >(
+		d_first_point_cloud,
+		number_of_points_first_point_cloud,
+		d_second_point_cloud,
+		number_of_points_second_point_cloud,
+		d_hashTable,
+		d_buckets,
+		rgd_params,
+		search_radius,
+		max_number_considered_in_INNER_bucket,
+		max_number_considered_in_OUTER_bucket,
+		d_nearest_neighbour_indexes);
+
+	kernel_change_nn_value_for_reduction << <blocks, threads >> > (d_nearest_neighbour_indexes, number_of_points_second_point_cloud);
+
+	thrust::device_ptr <int> dev_ptr_d_nearest_neighbour_indexes(d_nearest_neighbour_indexes);
+	number_of_nn = thrust::reduce(dev_ptr_d_nearest_neighbour_indexes, dev_ptr_d_nearest_neighbour_indexes + number_of_points_second_point_cloud);
+
+
+	err = cudaDeviceSynchronize();
+	return err;
+}
+
+__global__ void kernel_cudaTransformPointCloud(lidar_pointcloud::PointXYZIRNLRGB *d_point_cloud,
+		int number_of_points,
+		float r00, float r10, float r20, float r01, float r11, float r21, float r02, float r12, float r22, float t0, float t1, float t2)
+{
+	int ind = blockIdx.x*blockDim.x + threadIdx.x;
+
+	if (ind<number_of_points)
+	{
+		lidar_pointcloud::PointXYZIRNLRGB d_p = d_point_cloud[ind];
+		float vOut[3];
+		vOut[0] = r00 * d_p.x + r01 * d_p.y + r02 * d_p.z + t0;
+		vOut[1] = r10 * d_p.x + r11 * d_p.y + r12 * d_p.z + t1;
+		vOut[2] = r20 * d_p.x + r21 * d_p.y + r22 * d_p.z + t2;
+
+		d_p.x = vOut[0];
+		d_p.y = vOut[1];
+		d_p.z = vOut[2];
+
+		vOut[0] = r00 * d_p.normal_x + r01 * d_p.normal_y + r02 * d_p.normal_z;
+		vOut[1] = r10 * d_p.normal_x + r11 * d_p.normal_y + r12 * d_p.normal_z;
+		vOut[2] = r20 * d_p.normal_x + r21 * d_p.normal_y + r22 * d_p.normal_z;
+
+		d_p.normal_x = vOut[0];
+		d_p.normal_y = vOut[1];
+		d_p.normal_z = vOut[2];
+
+		d_point_cloud[ind] = d_p;
+	}
+}
+
+cudaError_t cudaTransformPointCloud(int threads, lidar_pointcloud::PointXYZIRNLRGB *d_point_cloud,
+		int number_of_points,
+		float r00, float r10, float r20, float r01, float r11, float r21, float r02, float r12, float r22, float t0, float t1, float t2)
+{
+	kernel_cudaTransformPointCloud << <number_of_points / threads + 1, threads >> >
+			(d_point_cloud, number_of_points, r00, r10, r20, r01, r11, r21, r02, r12, r22, t0, t1, t2);
+
+	cudaDeviceSynchronize();
+	return cudaGetLastError();
+}
+
+__global__ void kernel_cudaTransformPointCloud(lidar_pointcloud::PointXYZIRNLRGB *d_point_cloud_in,
+		int number_of_points_in,
+		lidar_pointcloud::PointXYZIRNLRGB *d_point_cloud_out,
+		int number_of_points_out,
+		float r00, float r10, float r20, float r01, float r11, float r21, float r02, float r12, float r22, float t0, float t1, float t2)
+{
+	int ind = blockIdx.x*blockDim.x + threadIdx.x;
+
+	if ((ind < number_of_points_in) && (number_of_points_in == number_of_points_out))
+	{
+		lidar_pointcloud::PointXYZIRNLRGB d_p = d_point_cloud_in[ind];
+		float vOut[3];
+		vOut[0] = r00 * d_p.x + r01 * d_p.y + r02 * d_p.z + t0;
+		vOut[1] = r10 * d_p.x + r11 * d_p.y + r12 * d_p.z + t1;
+		vOut[2] = r20 * d_p.x + r21 * d_p.y + r22 * d_p.z + t2;
+
+		d_p.x = vOut[0];
+		d_p.y = vOut[1];
+		d_p.z = vOut[2];
+
+		vOut[0] = r00 * d_p.normal_x + r01 * d_p.normal_y + r02 * d_p.normal_z;
+		vOut[1] = r10 * d_p.normal_x + r11 * d_p.normal_y + r12 * d_p.normal_z;
+		vOut[2] = r20 * d_p.normal_x + r21 * d_p.normal_y + r22 * d_p.normal_z;
+
+		d_p.normal_x = vOut[0];
+		d_p.normal_y = vOut[1];
+		d_p.normal_z = vOut[2];
+
+		d_point_cloud_out[ind] = d_p;
+	}
+}
+
+cudaError_t cudaTransformPointCloud(int threads, lidar_pointcloud::PointXYZIRNLRGB *d_point_cloud_in,
+		int number_of_points_in,
+		lidar_pointcloud::PointXYZIRNLRGB *d_point_cloud_out,
+		int number_of_points_out,
+		float r00, float r10, float r20, float r01, float r11, float r21, float r02, float r12, float r22, float t0, float t1, float t2)
+{
+	kernel_cudaTransformPointCloud << <number_of_points_in / threads + 1, threads >> >
+		(d_point_cloud_in, number_of_points_in, d_point_cloud_out, number_of_points_out, r00, r10, r20, r01, r11, r21, r02, r12, r22, t0, t1, t2);
+
+	cudaDeviceSynchronize();
+	return cudaGetLastError();
 }
