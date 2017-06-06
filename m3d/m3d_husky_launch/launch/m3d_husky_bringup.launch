@@ -10,5 +10,5 @@
     <remap to="/m3d_test/aggregator/request" from="~button" />
   
   </node>
-
+  <node name="gpu_6dslam_node" pkg="gpu_6dslam" type="gpu_6dslam_node"/>
 </launch>
