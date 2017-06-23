@@ -4,5 +4,11 @@
   <include file="$(find m3dunit_base)/launch/universal.launch" />
   <include file="$(find husky_base)/launch/base.launch" />
   <node name="static_tf" type="static_transform_publisher" pkg="tf" args = "0 0 0 0 0 0 user_rail_link m3d_test/m3d_link 10"/>
-
+  <node name="joy_to_bool" type="joyToBool.py" pkg="m3dunit_base">
+    <remap from="/joy" to="/joy_teleop/joy"/>
+    <param name="buttonNo" value="1"/>
+    <remap to="/m3d_test/aggregator/request" from="~button" />
+  
+  </node>
+  <node name="gpu_6dslam_node" pkg="gpu_6dslam" type="gpu_6dslam_node"/>
 </launch>

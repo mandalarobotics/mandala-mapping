@@ -1,7 +1,7 @@
 #include "gpu6DSLAM.h"
 
 
-void gpu6DSLAM::registerSingleScan(pcl::PointCloud<lidar_pointcloud::PointXYZIRNLRGB> &pc, Eigen::Affine3f mtf, std::string iso_time_str)
+void gpu6DSLAM::registerSingleScan(pcl::PointCloud<lidar_pointcloud::PointXYZIRNLRGB> pc, Eigen::Affine3f mtf, std::string iso_time_str)
 {
 	static Eigen::Affine3f last_mtf = mtf;
 
@@ -87,11 +87,6 @@ void gpu6DSLAM::registerSingleScan(pcl::PointCloud<lidar_pointcloud::PointXYZIRN
 		Eigen::Affine3f mr = this->vmregistered[this->vmregistered.size()-1] * odometryIncrement;
 		this->vmregistered.push_back(mr);
 
-		//first step of SLAM - register last arrived scan
-		std::cout << "registerLastArrivedScan START" << std::endl;
-
-		//iso_time_str
-
 		pcl::PointCloud<lidar_pointcloud::PointXYZIRNLRGB> pc_before;
 		for(size_t i = 0 ;i < vpc.size(); i++)
 		{
@@ -101,6 +96,30 @@ void gpu6DSLAM::registerSingleScan(pcl::PointCloud<lidar_pointcloud::PointXYZIRN
 		}
 		pcl::io::savePCDFileBinary(std::string("/tmp/pc_before_")+iso_time_str + std::string(".pcd"), pc_before);
 
+
+		Eigen::Affine3f mBestYaw = Eigen::Affine3f::Identity();
+
+		cudaWrapper.findBestYaw(
+				this->vpc[this->vpc.size()-2],
+				this->vmregistered[this->vmregistered.size()-2],
+				this->vpc[this->vpc.size()-1],
+				this->vmregistered[this->vmregistered.size()-1],
+				this->findBestYaw_bucket_size,
+				this->findBestYaw_bounding_box_extension,
+				this->findBestYaw_search_radius,
+				this->findBestYaw_max_number_considered_in_INNER_bucket,
+				this->findBestYaw_max_number_considered_in_OUTER_bucket,
+				this->findBestYaw_start_angle,
+				this->findBestYaw_finish_angle,
+				this->findBestYaw_step_angle,
+				mBestYaw);
+
+		//std::cout << mBestYaw.matrix() << std::endl;
+
+		this->vmregistered[this->vmregistered.size()-1] = this->vmregistered[this->vmregistered.size()-1] * mBestYaw;
+
+
+		std::cout << "registerLastArrivedScan START" << std::endl;
 
 		for(int i = 0 ; i < this->slam_registerLastArrivedScan_number_of_iterations_step1; i++)
 		{
@@ -117,6 +136,21 @@ void gpu6DSLAM::registerSingleScan(pcl::PointCloud<lidar_pointcloud::PointXYZIRN
 			registerLastArrivedScan(cudaWrapper, this->slam_search_radius_step3, this->slam_bucket_size_step3);
 		}
 
+		for(int i = 0 ; i < this->slam_registerAll_number_of_iterations_step1; i++)
+		{
+			registerAll(cudaWrapper, this->slam_search_radius_step1, this->slam_bucket_size_step1);
+		}
+
+		for(int i = 0 ; i < this->slam_registerAll_number_of_iterations_step2; i++)
+		{
+			registerAll(cudaWrapper, this->slam_search_radius_step2, this->slam_bucket_size_step2);
+		}
+
+		for(int i = 0 ; i < this->slam_registerAll_number_of_iterations_step3; i++)
+		{
+			registerAll(cudaWrapper, this->slam_search_radius_step3, this->slam_bucket_size_step3);
+		}
+
 		pcl::PointCloud<lidar_pointcloud::PointXYZIRNLRGB> pc_after;
 		for(size_t i = 0 ;i < vpc.size(); i++)
 		{
@@ -125,7 +159,6 @@ void gpu6DSLAM::registerSingleScan(pcl::PointCloud<lidar_pointcloud::PointXYZIRN
 			pc_after += pc_before_local;
 		}
 		pcl::io::savePCDFileBinary(std::string("/tmp/pc_after_")+iso_time_str + std::string(".pcd"), pc_after);
-
 
 
 		std::cout << "registerLastArrivedScan FINISHED" << std::endl;
@@ -153,11 +186,23 @@ void gpu6DSLAM::registerSingleScan(pcl::PointCloud<lidar_pointcloud::PointXYZIRN
 }
 
 
-pcl::PointCloud<lidar_pointcloud::PointXYZIRNLRGB> gpu6DSLAM::getMetascan()
+pcl::PointCloud<lidar_pointcloud::PointXYZIRNLRGB> gpu6DSLAM::getMetascan(Eigen::Affine3f m)
 {
 	std::cout << "gpu6DSLAM::getMetascan" << std::endl;
 
+	Eigen::Affine3f mLastInv = this->vmregistered[this->vmregistered.size()-1].inverse();
+
 	pcl::PointCloud<lidar_pointcloud::PointXYZIRNLRGB> metascan;
+
+	for(size_t i = 0; i < vpc.size(); i++)
+	{
+		pcl::PointCloud<lidar_pointcloud::PointXYZIRNLRGB> pc = vpc[i];
+		transformPointCloud(pc, vmregistered[i]);
+		metascan += pc;
+	}
+
+	transformPointCloud(metascan, mLastInv);
+	transformPointCloud(metascan, m);
 
 	return metascan;
 }
@@ -166,7 +211,7 @@ void gpu6DSLAM::registerLastArrivedScan(CCudaWrapper &cudaWrapper, float slam_se
 {
 	//this->slam_registerLastArrivedScan_distance_threshold = 10.0f;
 
-	std::vector<Eigen::Affine3f> v_poses;
+	//std::vector<Eigen::Affine3f> v_poses;
 
 	size_t i = vmregistered.size() - 1;
 
@@ -188,7 +233,7 @@ void gpu6DSLAM::registerLastArrivedScan(CCudaWrapper &cudaWrapper, float slam_se
 	obs.ty = xyz1.y();
 	obs.tz = xyz1.z();
 
-	for(size_t j = 0; j < i; j++)
+	for(size_t j = i-1; j < i; j++)
 	{
 		Eigen::Vector3f omfika2;
 		Eigen::Vector3f xyz2;
@@ -303,7 +348,8 @@ void gpu6DSLAM::registerLastArrivedScan(CCudaWrapper &cudaWrapper, float slam_se
 			if(obs.vobs_nn.size() > this->slam_number_of_observations_threshold )
 			{
 			//std::cout << "obs.vobs_nn.size(): " << obs.vobs_nn.size() << std::endl;
-				if(cudaWrapper.registerLS(obs))
+				//if(cudaWrapper.registerLS(obs))
+				if(cudaWrapper.registerLS_4DOF(obs))
 				{
 					Eigen::Vector3f omfika1_res(obs.om, obs.fi, obs.ka);
 					Eigen::Vector3f xyz1_res(obs.tx, obs.ty, obs.tz);
@@ -315,6 +361,176 @@ void gpu6DSLAM::registerLastArrivedScan(CCudaWrapper &cudaWrapper, float slam_se
 			}
 		}
 	}
+}
+
+void gpu6DSLAM::registerAll(CCudaWrapper &cudaWrapper, float slam_search_radius, float slam_bucket_size)
+{
+	std::vector<Eigen::Affine3f> v_poses;
+
+	if(vpc.size() < 5)return;
+
+	for(int i = 0 ; i < vpc.size() - 5 ;i++)v_poses.push_back(vmregistered[i]);
+
+	for(size_t i = vpc.size() - 5; i < vpc.size(); i++)
+	{
+		std::cout << "registerAll node: " << i << " of: " << vpc.size() - 1 << std::endl;
+
+		Eigen::Vector3f omfika1;
+		Eigen::Vector3f xyz1;
+		Eigen::Affine3f pose1;
+
+		cudaWrapper.Matrix4ToEuler(vmregistered[i], omfika1, xyz1);
+		cudaWrapper.EulerToMatrix(omfika1, xyz1, pose1);
+
+		pcl::PointCloud<lidar_pointcloud::PointXYZIRNLRGB> _point_cloud_1 = vpc[i];
+		transformPointCloud(_point_cloud_1, pose1);
+
+		observations_t obs;
+		obs.om = omfika1.x();
+		obs.fi = omfika1.y();
+		obs.ka = omfika1.z();
+		obs.tx = xyz1.x();
+		obs.ty = xyz1.y();
+		obs.tz = xyz1.z();
+
+		for(size_t j = 0; j < vpc.size(); j++)
+		{
+			if(i != j)
+			{
+				Eigen::Vector3f omfika2;
+				Eigen::Vector3f xyz2;
+				Eigen::Affine3f pose2;
+				cudaWrapper.Matrix4ToEuler(vmregistered[j], omfika2, xyz2);
+				cudaWrapper.EulerToMatrix(omfika2, xyz2, pose2);
+
+
+				float dist = sqrt(  (xyz1.x() - xyz2.x()) * (xyz1.x() - xyz2.x()) +
+									(xyz1.y() - xyz2.y()) * (xyz1.y() - xyz2.y()) +
+									(xyz1.z() - xyz2.z()) * (xyz1.z() - xyz2.z()) );
+
+				if(dist < this->slam_registerAll_distance_threshold)
+				{
+
+
+					pcl::PointCloud<lidar_pointcloud::PointXYZIRNLRGB> _point_cloud_2 = vpc[j];
+					transformPointCloud(_point_cloud_2, pose2);
+
+					std::vector<int> nearest_neighbour_indexes;
+					nearest_neighbour_indexes.resize(_point_cloud_2.size());
+					std::fill(nearest_neighbour_indexes.begin(), nearest_neighbour_indexes.end(), -1);
+
+					cudaWrapper.semanticNearestNeighbourhoodSearch(
+							_point_cloud_1,
+							_point_cloud_2,
+							slam_search_radius,
+							slam_bucket_size,
+							this->slam_bounding_box_extension,
+							this->slam_max_number_considered_in_INNER_bucket,
+							this->slam_max_number_considered_in_OUTER_bucket,
+							nearest_neighbour_indexes);
+
+
+
+					int number_of_observations_plane = 0;
+					int number_of_observations_edge = 0;
+					int number_of_observations_ceiling = 0;
+					int number_of_observations_ground = 0;
+
+					for(size_t ii = 0 ; ii < nearest_neighbour_indexes.size(); ii++)
+					{
+						if(nearest_neighbour_indexes[ii] != -1)
+						{
+							switch (_point_cloud_2[ii].label)
+							{
+								case LABEL_PLANE:
+								{
+									number_of_observations_plane ++;
+									break;
+								}
+								case LABEL_EDGE:
+								{
+									number_of_observations_edge ++;
+									break;
+								}
+								case LABEL_CEILING:
+								{
+									number_of_observations_ceiling ++;
+									break;
+								}
+								case LABEL_GROUND:
+								{
+									number_of_observations_ground ++;
+									break;
+								}
+							}
+						}
+					}
+
+
+					for(size_t ii = 0 ; ii < nearest_neighbour_indexes.size(); ii++)
+					{
+						if(nearest_neighbour_indexes[ii] != -1)
+						{
+							pcl::PointXYZ p1(_point_cloud_1[nearest_neighbour_indexes[ii]].x, _point_cloud_1[nearest_neighbour_indexes[ii]].y, _point_cloud_1[nearest_neighbour_indexes[ii]].z);
+							pcl::PointXYZ p2(_point_cloud_2[ii].x, _point_cloud_2[ii].y, _point_cloud_2[ii].z);
+
+							obs_nn_t obs_nn;
+							obs_nn.x0 = vpc[i].points[nearest_neighbour_indexes[ii]].x;
+							obs_nn.y0 = vpc[i].points[nearest_neighbour_indexes[ii]].y;
+							obs_nn.z0 = vpc[i].points[nearest_neighbour_indexes[ii]].z;
+							obs_nn.x_diff = p1.x - p2.x;
+							obs_nn.y_diff = p1.y - p2.y;
+							obs_nn.z_diff = p1.z - p2.z;
+							switch(_point_cloud_2[ii].label)
+							{
+								case 0://plane
+								{
+									obs_nn.P = slam_observation_weight_plane/number_of_observations_plane;
+									break;
+								}
+								case 1: //edge
+								{
+									obs_nn.P = slam_observation_weight_edge/number_of_observations_edge;
+									break;
+								}
+								case 2: //ceiling
+								{
+									obs_nn.P = slam_observation_weight_ceiling/number_of_observations_ceiling;
+									break;
+								}
+								case 3: //floor/ground
+								{
+									obs_nn.P = slam_observation_weight_ground/number_of_observations_ground;
+									break;
+								}
+							}
+							obs.vobs_nn.push_back(obs_nn);
+						}
+					}
+				}
+			}//if(i != j)
+		}//for(size_t j = 0; j < vpointcloud.size(); j++)
+
+		std::cout << "obs.vobs_nn.size() " << obs.vobs_nn.size() << std::endl;
+
+		//if(!cudaWrapper.registerLS(obs))
+		if(!cudaWrapper.registerLS_4DOF(obs))
+		{
+			std::cout << "PROBLEM: cudaWrapper.registerLS(obs2to1)" << std::endl;
+			return;
+		}
+
+		Eigen::Vector3f omfika1_res(obs.om, obs.fi, obs.ka);
+		Eigen::Vector3f xyz1_res(obs.tx, obs.ty, obs.tz);
+		Eigen::Affine3f pose1_res;
+		cudaWrapper.EulerToMatrix(omfika1_res, xyz1_res, pose1_res);
+
+		std::cout << pose1_res.matrix() << std::endl;
+
+		v_poses.push_back(pose1_res);
+	}
+
+	vmregistered = v_poses;
 }
 
 void gpu6DSLAM::transformPointCloud(pcl::PointCloud<lidar_pointcloud::PointXYZIRNLRGB> &pointcloud, Eigen::Affine3f transform)
@@ -346,3 +562,4 @@ void gpu6DSLAM::transformPointCloud(pcl::PointCloud<lidar_pointcloud::PointXYZIR
 	}
 	return;
 }
+
