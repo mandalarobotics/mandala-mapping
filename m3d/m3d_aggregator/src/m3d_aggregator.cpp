@@ -29,7 +29,27 @@ public:
 		pc_agg = pcl::PointCloud<PointType>::Ptr(new pcl::PointCloud<PointType>);
 		angularDistance = 1.1*M_PI;
 		firstScan = false;
+
+		bb_x_up = 0 ;
+		bb_x_down = 0 ;
+		bb_y_up = 0 ;
+		bb_y_down = 0 ;
+		bb_z_up = 0 ;
+		bb_z_down = 0 ;
+
 	}
+
+	void setBBox(	double _bb_x_up, double _bb_x_down, double _bb_y_up,
+		double _bb_y_down, double _bb_z_up,	double _bb_z_down)
+		{
+			bb_x_up=_bb_x_up;
+			bb_x_down=_bb_x_down;
+			bb_y_up=_bb_y_up;
+			bb_y_down=_bb_y_down;
+			bb_z_up=_bb_z_up;
+			bb_z_down=_bb_z_down;
+
+		}
 	void addPoints (PointType &p, tf::Transform &transform)
 	{
 		if (!creatingPointCloud) return;
@@ -37,12 +57,21 @@ public:
 		tf::Vector3 p1;
 		p1 = transform*p0;
 		PointType pp = p;
+
+
 		pp.x = p1[0];
 		pp.y = p1[1];
 		pp.z = p1[2];
-		pc_agg->push_back(pp);
+		if (
+					(pp.x>bb_x_up) || (pp.x<bb_x_down) ||
+					(pp.y>bb_y_up) || (pp.y<bb_y_down) ||
+					(pp.z>bb_z_up) || (pp.z<bb_z_down)
 
-		// compute addition of traveled angular distance
+	 			 )
+  	{
+				pc_agg->push_back(pp);
+		}
+			// compute addition of traveled angular distance
 		tf::Quaternion q = transform.getRotation();
 		if (firstScan)
 		{
@@ -95,6 +124,7 @@ public:
 	}
 
 private:
+
 	pcl::PointCloud<PointType>::Ptr pc_agg;
 	tf::Quaternion begin;
 	tf::Quaternion actual;
@@ -102,6 +132,14 @@ private:
 	double angularDistance;
 	bool creatingPointCloud;
 	bool firstScan;
+
+	double bb_x_up;
+	double bb_x_down;
+	double bb_y_up;
+	double bb_y_down;
+	double bb_z_up;
+	double bb_z_down;
+
 };
 
 
@@ -115,6 +153,24 @@ public:
 		n.param<std::string>("rotLaserScan", rotLaserScan, "/m3d_test/rot_scan");
 		n.param<std::string>("rotLaserPointCloud", rotLaserPointCloud, "");
 
+
+		double bb_x_up;
+		double bb_x_down;
+		double bb_y_up;
+		double bb_y_down;
+		double bb_z_up;
+		double bb_z_down;
+
+		n.param<double>("bb_x_up"   ,bb_x_up,    1);
+		n.param<double>("bb_x_down" ,bb_x_down, -1);
+
+		n.param<double>("bb_y_up"   ,bb_y_up,    1);
+		n.param<double>("bb_y_down" ,bb_y_down, -1);
+
+		n.param<double>("bb_z_up"   ,bb_z_up,    1);
+		n.param<double>("bb_z_down" ,bb_z_down, -1);
+
+
 		cloud_pub = n.advertise<sensor_msgs::PointCloud2>("cloud", 1);
 		progress_pub = n.advertise<std_msgs::Float32>("progress", 1);
 		done_pub =  n.advertise<std_msgs::Bool>("done", 1);
@@ -125,6 +181,7 @@ public:
 		if (rotLaserPointCloud.size()!=0)
 			pointCloud_sub = n.subscribe(rotLaserPointCloud, 1, &aggregator_node::rotLaserPointCloudCallback, this);
 		mPointCloudAggregator.createPointCloud();
+		mPointCloudAggregator.setBBox(bb_x_up,bb_x_down,bb_y_up, bb_y_down,	bb_z_up,	bb_z_down);
 		ros::spin();
 	}
 

@@ -66,8 +66,22 @@ public:
 	void EulerToMatrix(Eigen::Vector3f omfika, Eigen::Vector3f xyz, Eigen::Affine3f &m);
 
 	bool registerLS(observations_t &obs);
+	bool registerLS_4DOF(observations_t &obs);
 	void throw_on_cuda_error(cudaError_t code, const char *file, int line);
 
+	void findBestYaw(pcl::PointCloud<lidar_pointcloud::PointXYZIRNLRGB> &pointcloud0,
+				Eigen::Affine3f transform0,
+				pcl::PointCloud<lidar_pointcloud::PointXYZIRNLRGB> &pointcloud1,
+				Eigen::Affine3f transform1,
+				float bucket_size,
+				float bounding_box_extension,
+				float search_radius,
+				int max_number_considered_in_INNER_bucket,
+				int max_number_considered_in_OUTER_bucket,
+				float angle_start,
+				float angle_finish,
+				float angle_step,
+				Eigen::Affine3f &myaw);
 	int threads;
 	int threadsNV;
 
