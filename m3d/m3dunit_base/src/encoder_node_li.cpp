@@ -32,6 +32,8 @@ int main(int argc, char** argv)
     ros::Subscriber s2 =node.subscribe("position", 1, positionCallbac);
 
     std::string ip;
+    std::string serial_dev;
+
 	std::string m3d_frame_id;
 	std::string m3d_front_frame_id;
 	std::string m3d_rot_frame_id;
@@ -41,17 +43,40 @@ int main(int argc, char** argv)
     encoderOffset = encoderOffset + M_PI;
 	
 	node.param<double>("encoderOffset", encoderOffset, 0);
-	node.param<std::string>("ip", ip, "192.168.0.150");
+    node.param<std::string>("ip", ip, "");
+    node.param<std::string>("serial", serial_dev, "");
+
+
 	node.param<std::string>("m3d_frame_id", m3d_frame_id, "m3d_link");
 	node.param<std::string>("m3d_front_frame_id", m3d_front_frame_id, "m3d_front_laser_link");
 	node.param<std::string>("m3d_rot_frame_id", m3d_rot_frame_id, "m3d_rot_laser_link");
 
-    ROS_INFO_ONCE("Try to connect to M3D unit @ %s",ip.c_str());
+    //ROS_INFO_ONCE("Try to connect to M3D unit @ %s",ip.c_str());
 
-    if (!m3d.connect_to_m3d(ip))
+    if (ip.length()>0)
     {
-    	ROS_FATAL("Problem connecting to unit");
-    	return -1 ;
+        ROS_INFO_STREAM("connecting using TCP ip: " << ip);
+
+        if (!m3d.connect_to_m3d_tcp(ip))
+        {
+            ROS_FATAL("Problem connecting to unit");
+            return -1 ;
+        }
+    }
+    else if (serial_dev.length()>0)
+    {
+        ROS_INFO_STREAM("connecting using SERIAL port: "<<serial_dev );
+
+        if (!m3d.connect_to_m3d_serial(serial_dev))
+        {
+            ROS_FATAL("Problem connecting to unit");
+            return -1 ;
+        }
+    }
+    else
+    {
+        ROS_FATAL("no method specified");
+        return -1;
     }
 
     ROS_INFO_ONCE("connected");

@@ -22,6 +22,11 @@ class driver_m3d
     {
         VEL, POS, NOT_SET
     };
+    enum COM_MODE
+    {
+        COM_MODE_NONE,COM_MODE_TCP,COM_MODE_SERIAL
+    };
+
 
 public:
 	driver_m3d();
@@ -29,7 +34,14 @@ public:
 	/// connecting to 3dunit on given IP address
 	/// @return true if connected
 	///////////////////////////////////////////////////////////
-    bool connect_to_m3d(std::string IP);
+    bool connect_to_m3d_tcp(std::string IP);
+    ///////////////////////////////////////////////////////////
+    /// connecting to 3dunit on given serial device
+    /// @return true if connected
+    ///////////////////////////////////////////////////////////
+    bool connect_to_m3d_serial(std::string dev);
+
+
 	///////////////////////////////////////////////////////////
 	/// disconnect from 3dunit
 	///////////////////////////////////////////////////////////
@@ -58,7 +70,9 @@ public:
     float geVoltage(bool & isOk);
     int getEncoderRes(bool & isOk);
 private:
+  COM_MODE cmode;
 	boost::asio::io_service io_service;
+  boost::asio::serial_port serial_port;
 	tcp::socket socket;
 	std::string host;
 	std::string incommingData;
