@@ -3,11 +3,9 @@
 
 <arg name="unit_name" default="m3d_test"/>
 
-<arg name="front_laser_ip" default="192.168.0.147"/>
-<arg name="rot_laser_ip"   default="192.168.0.206"/>
+<arg name="rot_laser_ip"   default="192.168.0.205"/>
 
-<arg name="front_laser_type" default="TIM500"/>
-<arg name="rot_laser_type"   default="TIM500"/>	
+<arg name="rot_laser_type"   default="TIM500"/>
 
 
 
@@ -23,15 +21,7 @@
 			<param name="inv" value="false"/>
         		<remap from ="~laserScan" to="rot_scan"/>
 		</node>
-	
-		<node name="front_laser" pkg="sick_minimal_driver" type="sick_minimal_driver" output="screen">
-			<param name="ip" value="$(arg front_laser_ip)"/>
-			<param name="frame_id" value="$(arg unit_name)/front_laser_optical"/>
-			<param name="sa" value="-135"/>
-			<param name="inv" value="true"/>
-			<remap from ="~laserScan" to="planar_scan"/>
-		</node>
-	
+
 		<node name="rotation" pkg="m3dunit_base" type="m3d_driver_node" output="screen">
 			<param name="encoderOffset" value ="0"/>
 			<param name="m3d_frame_id" value="$(arg unit_name)/m3d_link"/>
@@ -49,7 +39,7 @@
 		<node name="output_topic1" pkg="rostopic" type="rostopic" output="screen" args="pub /$(arg unit_name)/rotation/velocity std_msgs/Float32 $(arg vel)"/>
 
 		<node name="tf_broadcaster" pkg="m3dunit_base" type="transformBroadcaster.py" output="screen">
-			<param name="front_laser_type" value="$(arg front_laser_type)"/>
+			<param name="front_laser_type" value="none"/>
 			<param name="rot_laser_type"   value="$(arg rot_laser_type)"/>
 			<param name="prefix" value="$(arg unit_name)/"/>
 		</node>

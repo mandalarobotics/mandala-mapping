@@ -5,7 +5,7 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/thread/thread.hpp>
 #include <boost/algorithm/string.hpp>
-#define MC_RESPONSE_TIME 55
+#define MC_RESPONSE_TIME 15
 
 bool driver_m3d::connect_to_m3d_serial(std::string dev)
 {
@@ -14,7 +14,7 @@ bool driver_m3d::connect_to_m3d_serial(std::string dev)
     {
 
         serial_port.open(dev);
-        serial_port.set_option(boost::asio::serial_port_base::baud_rate(9600));
+        serial_port.set_option(boost::asio::serial_port_base::baud_rate(57600));
         serial_port.set_option(boost::asio::serial_port::flow_control(
                                    boost::asio::serial_port::flow_control::software));
         if (!serial_port.is_open()) return false;
