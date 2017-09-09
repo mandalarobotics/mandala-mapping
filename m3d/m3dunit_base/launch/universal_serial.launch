@@ -5,7 +5,7 @@
 
 <arg name="rot_laser_ip"   default="192.168.0.205"/>
 
-<arg name="rot_laser_type"   default="TIM500"/>
+<arg name="rot_laser_type"   default="LMS100C"/>
 
 
 
