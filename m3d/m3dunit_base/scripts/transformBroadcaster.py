@@ -10,11 +10,13 @@ import json
 TIM500_TRANSLATION = (0, 0.0035,  0);
 LMS100_TRANSLATION = (0.074, 0, 0.068);
 LMS100C_TRANSLATION = (0, 0, 0.068);
+VLP16_TRANSLATION = (0, 0.0035,  0);
 
 
 TIM500_ORIENTATION = (0, 0, 0, 1);
 LMS100_ORIENTATION = (0, 0, 0, 1);
 LMS100C_ORIENTATION = (0, 0, 0, 1);
+VLP16_ORIENTATION = (0, 0, 0, 1);
 
 calibration_fileName = None
 
@@ -95,6 +97,9 @@ if __name__ == '__main__':
     if rot_laser_type == "LMS100C" :
         rotLaser_translation = LMS100C_TRANSLATION;
         rotLaser_orientation = LMS100C_ORIENTATION;
+    if rot_laser_type == "VLP16" :
+        rotLaser_translation = VLP16_TRANSLATION;
+        rotLaser_orientation = VLP16_ORIENTATION;
 
     if front_laser_type == "TIM500" :
         frontLaser_translation = TIM500_TRANSLATION;
@@ -105,11 +110,12 @@ if __name__ == '__main__':
     if front_laser_type == "LMS100C" :
         frontLaser_translation = LMS100C_TRANSLATION;
         frontLaser_orientation = LMS100C_ORIENTATION;
+    if front_laser_type == "VLP16" :
+        frontLaser_translation = VLP16_TRANSLATION;
+        frontLaser_orientation = VLP16_ORIENTATION;
 
     print "rot_laser_type         : ", rot_laser_type
     print "front_laser_type       : ", front_laser_type
-
-
 
     print "rotLaser_translation   : ", rotLaser_translation
     print "rotLaser_orientation   : ", rotLaser_orientation
@@ -118,8 +124,6 @@ if __name__ == '__main__':
     print "frontLaser_orientation : ", frontLaser_orientation
 
     while not rospy.is_shutdown():
-
-
         if rotLaser_translation is not None:
             broadcaster.sendTransform(rotLaser_translation, rotLaser_orientation,
                      rospy.Time.now(),
