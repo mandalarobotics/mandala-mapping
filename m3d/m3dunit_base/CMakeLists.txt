@@ -29,9 +29,11 @@ include_directories(
 
 
 add_executable(m3d_driver_node src/encoder_node_li.cpp src/driverLib.cpp)
+add_dependencies(m3d_driver_node m3d_msgs_generate_message_cpp)
 target_link_libraries(m3d_driver_node ${catkin_LIBRARIES})
 
 add_executable(m3d_set_offset src/setoffset.cpp src/driverLib.cpp)
+add_dependencies(m3d_set_offset m3d_msgs_generate_message_cpp)
 target_link_libraries(m3d_set_offset ${catkin_LIBRARIES})
 
  install(PROGRAMS

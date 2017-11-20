@@ -1,0 +1,84 @@
+<?xml version="1.0"?>
+<launch>
+
+<arg name="unit_name" default="m3d_test"/>
+
+<arg name="front_laser_ip" default="192.168.0.147"/>
+<arg name="unit_ip" default="192.168.1.150"/>
+<arg name="rot_laser_ip"   default="192.168.1.201"/>
+
+<arg name="front_laser_type" default="NONE"/>
+<arg name="rot_laser_type"   default="VLP16"/>	
+<arg name="calibration" default="$(find velodyne_pointcloud)/params/VLP16_hires_db.yaml"/>
+
+
+<group ns="$(arg unit_name)" clear_params="true">
+
+ 
+	<arg name="vel"   default="12"/>
+	<node name="rotation" pkg="m3dunit_base" type="m3d_driver_node" output="screen">
+	  <param name="encoderOffset" value ="0"/>
+	  <param name="m3d_frame_id" value="$(arg unit_name)/m3d_link"/>
+	  <param name="m3d_rot_frame_id" value="$(arg unit_name)/m3d_rot_laser_link"/>
+	  <param name="m3d_front_frame_id" value="$(arg unit_name)/m3d_front_laser_link"/>
+    <param name="ip" value="$(arg unit_ip)"/>
+  </node>
+
+	<node name="front_laser" pkg="sick_minimal_driver" type="sick_minimal_driver" output="screen">
+		<param name="ip" value="$(arg front_laser_ip)"/>
+		<param name="frame_id" value="$(arg unit_name)/front_laser_optical"/>
+		<param name="sa" value="-135"/>
+		<param name="inv" value="true"/>
+		<remap from ="~laserScan" to="planar_scan"/>
+	</node>
+
+  <node name="output_topic1" pkg="rostopic" type="rostopic" output="screen" args="pub /$(arg unit_name)/rotation/velocity std_msgs/Float32 $(arg vel)"/>
+  <node name="tf_broadcaster" pkg="m3dunit_base" type="transformBroadcaster.py" output="screen">
+    <param name="front_laser_type" value="$(arg front_laser_type)"/>
+    <param name="rot_laser_type"   value="$(arg rot_laser_type)"/>
+    <param name="prefix" value="$(arg unit_name)/"/>
+  </node>
+
+  <!-- declare arguments with default values -->
+ 
+  <arg name="device_ip" default="$(arg rot_laser_ip)" />
+  <arg name="frame_id" default="$(arg unit_name)/rot_laser_optical" />
+  <arg name="manager" default="velodyne_nodelet_manager" />
+  <arg name="max_range" default="130.0" />
+  <arg name="min_range" default="0.4" />
+  <arg name="pcap" default="" />
+  <arg name="port" default="2368" />
+  <arg name="read_fast" default="false" />
+  <arg name="read_once" default="false" />
+  <arg name="repeat_delay" default="0.0" />
+  <arg name="rpm" default="600.0" />
+  <arg name="laserscan_ring" default="-1" />
+  <arg name="laserscan_resolution" default="0.007" />
+
+  <!-- start nodelet manager and driver nodelets -->
+  <include file="$(find velodyne_driver)/launch/nodelet_manager.launch">
+    <arg name="device_ip" value="$(arg device_ip)"/>
+    <arg name="frame_id" value="$(arg frame_id)"/>
+    <arg name="manager" value="$(arg manager)" />
+    <arg name="model" value="VLP16"/>
+    <arg name="pcap" value="$(arg pcap)"/>
+    <arg name="port" value="$(arg port)"/>
+    <arg name="read_fast" value="$(arg read_fast)"/>
+    <arg name="read_once" value="$(arg read_once)"/>
+    <arg name="repeat_delay" value="$(arg repeat_delay)"/>
+    <arg name="rpm" value="$(arg rpm)"/>
+  </include>
+
+ 
+
+  <!-- start transform nodelets -->
+  <include file="$(find velodyne_pointcloud)/launch/transform_nodelet.launch">
+    <arg name="frame_id" value="$(arg unit_name)/m3d_link"/>
+    <arg name="calibration" value="$(arg calibration)"/>
+    <arg name="manager" value="$(arg manager)" />
+    <arg name="max_range" value="$(arg max_range)"/>
+    <arg name="min_range" value="$(arg min_range)"/>
+  </include>
+<!--    -->
+</group>
+</launch>
