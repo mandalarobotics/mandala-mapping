@@ -33,7 +33,10 @@ include_directories(
 
 ## Declare a cpp executable
 add_executable(m3d_calibration_twiddle src/m3d_calibration_twiddle.cpp )
-add_executable(m3d_calibration_sa src/m3d_calibration_sa.cpp )
+add_executable(m3d_calibration_sa src/m3d_calibration_sa.cpp)
+
+add_dependencies(m3d_calibration_twiddle ${catkin_EXPORTED_TARGETS})
+add_dependencies(m3d_calibration_sa ${catkin_EXPORTED_TARGETS})
 
 target_link_libraries(m3d_calibration_twiddle ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 target_link_libraries(m3d_calibration_sa  ${catkin_LIBRARIES} ${PCL_LIBRARIES})
