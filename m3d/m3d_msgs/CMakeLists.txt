@@ -17,6 +17,6 @@ add_service_files(
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES m3d_driver
-#  CATKIN_DEPENDS roscpp
-#  DEPENDS system_lib
+  CATKIN_DEPENDS roscpp message_runtime geometry_msgs std_msgs geometry_msgs
+  #DEPENDS message_runtime
 )

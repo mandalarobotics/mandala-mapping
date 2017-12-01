@@ -7,7 +7,6 @@ project(m3d_aggregator)
 #SET(CMAKE_BUILD_TYPE Release)
 find_package(catkin REQUIRED COMPONENTS
   roscpp
-  rospy
   std_msgs
   tf
   pcl_ros
@@ -21,8 +20,8 @@ find_package(Boost REQUIRED COMPONENTS system)
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES m3d_driver
-   CATKIN_DEPENDS roscpp tf pcl_ros tf_conversion m3d_msgs
-   DEPENDS system_lib Boost PCL
+   CATKIN_DEPENDS roscpp tf pcl_ros tf_conversions m3d_msgs std_msgs
+   DEPENDS  Boost PCL #system_lib
 )
 
 include_directories(
