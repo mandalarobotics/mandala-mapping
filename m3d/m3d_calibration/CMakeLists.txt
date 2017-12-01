@@ -21,7 +21,7 @@ find_package(Boost REQUIRED COMPONENTS system)
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES m3d_driver
-   CATKIN_DEPENDS roscpp tf pcl_ros tf_conversion m3d_msgs
+   CATKIN_DEPENDS roscpp tf pcl_ros tf_conversions m3d_msgs
    DEPENDS system_lib Boost PCL
 )
 
