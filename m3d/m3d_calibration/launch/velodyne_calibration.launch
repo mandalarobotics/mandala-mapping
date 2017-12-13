@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="unit_name" default="m3d_test"/>
+  <node name="calibration" pkg="m3d_calibration" type="m3d_calibration_twiddle" output="screen">
+  	<param name="unit_name" value="$(arg unit_name)"/>
+  	<param name="laserUpAxis" value="2"/>
+  	<param name="angularDistance" value="6"/>
+  	<param name="rotLaserPointCloud" value="/$(arg unit_name)/velodyne_points"/>
+  </node>
+</launch>

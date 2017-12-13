@@ -253,7 +253,7 @@ public:
 						secondPc.push_back(mPointCloud[j]);
 					}
 				}
-				else if (laserUpAxis == 3)
+				else if (laserUpAxis == 2)
 				{
 					if (mPointCloudAggregator.segments[i].segment[j].z>0)
 					{
