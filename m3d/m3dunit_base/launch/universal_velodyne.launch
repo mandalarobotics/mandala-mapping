@@ -11,11 +11,11 @@
 <arg name="rot_laser_type"   default="VLP16"/>	
 <arg name="calibration" default="$(find velodyne_pointcloud)/params/VLP16_hires_db.yaml"/>
 
+<arg name="vel"   default="12"/>
 
 <group ns="$(arg unit_name)" clear_params="true">
 
  
-	<arg name="vel"   default="12"/>
 	<node name="rotation" pkg="m3dunit_base" type="m3d_driver_node" output="screen">
 	  <param name="encoderOffset" value ="0"/>
 	  <param name="m3d_frame_id" value="$(arg unit_name)/m3d_link"/>
